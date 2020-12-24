@@ -14,6 +14,7 @@ PunishMode = False
 SenderReplace = False
 BanWord = []
 StrictBanWord = []
+ArrayReportMode = False
 
 def init():
     global Inited
@@ -63,6 +64,7 @@ async def get_inner_forward_message_id(ctx,fmsgid):
     return '[CQ:forward,id={msg_id}]'.format(msg_id=msgId)
 
 async def get_ad_removed_message(ctx,fmsg):
+    global ArrayReportMode
     have_ad = False
     #fmsg = fmsg.copy()
     msgLen = len(fmsg)
@@ -72,40 +74,73 @@ async def get_ad_removed_message(ctx,fmsg):
         msgStart=0
     for i in range(0,msgLen):
         innerMsg = fmsg[i]['content']
-        if innerMsg=="&#91;合并转发&#93;请使用手机QQ最新版本查看":
-            #  目前版本的go-cqhttp拿不到合并转发的套娃消息，因此暂时只支持一层
-            #    innerMsg = await get_inner_forward_message_id(ctx,innerMsg)
-            return fmsg
+        if not ArrayReportMode and isinstance(innerMsg,list):
+            ArrayReportMode = True
+        if ArrayReportMode and isinstance(innerMsg,str):
+            ArrayReportMode = False
+        if ArrayReportMode:
+            if innerMsg[0]['type'] == 'text':
+                if innerMsg[0]['data']['text'] == '[合并转发]请使用手机QQ最新版 本查看':
+                    return fmsg
+        else:
+            if innerMsg=="&#91;合并转发&#93;请使用手机QQ最新版本查看":
+                #  目前版本的go-cqhttp拿不到合并转发的套娃消息，因此暂时只支持一层
+                #    innerMsg = await get_inner_forward_message_id(ctx,innerMsg)
+                return fmsg
     for i in range(msgStart,msgLen):
         if have_ad:
             break
         innerMsg = fmsg[i]['content']
-        for word in BanWord:
-            if word in innerMsg:
-                have_ad = True
-                cutIndex = i
-        if StrictMode:
-            for word in StrictBanWord:
+        if ArrayReportMode:
+            for msg in innerMsg:
+                if msg['type'] == 'text':
+                    textmsg = msg['data']['text']
+                    for word in BanWord:
+                        if word in textmsg:
+                            have_ad = True
+                            cutIndex = i
+                    if StrictMode:
+                        for word in StrictBanWord:
+                            if word in textmsg:
+                                have_ad = True
+                                cutIndex = i
+        else:
+            for word in BanWord:
                 if word in innerMsg:
                     have_ad = True
                     cutIndex = i
+            if StrictMode:
+                for word in StrictBanWord:
+                    if word in innerMsg:
+                        have_ad = True
+                        cutIndex = i
     if have_ad:
         buildMsg = []
         for i in range(0,cutIndex):
             if SenderReplace:
                 fmsg[i]['sender']['nickname'] = ctx['sender']['nickname']
                 fmsg[i]['sender']['user_id'] = ctx['sender']['user_id']
-                pass
             buildMsg.append(fmsg[i])
         if PunishMode:
-            buildMsg.append({
-                "content" : "再转发有广告的消息我就是小猪",
-                "sender" : {
-                    "nickname" : ctx['sender']['nickname'],
-                    "user_id" : ctx['sender']['user_id'],
-                    "time" : ctx['time']
-                }
-            })
+            if ArrayReportMode:
+                buildMsg.append({
+                    "content" : [{'data': {'text': '再转发有广告的消息我就是小猪'}, 'type': 'text'}],
+                    "sender" : {
+                        "nickname" : ctx['sender']['nickname'],
+                        "user_id" : ctx['sender']['user_id'],
+                        "time" : ctx['time']
+                    }
+                })
+                pass
+            else:
+                buildMsg.append({
+                    "content" : "再转发有广告的消息我就是小猪",
+                    "sender" : {
+                        "nickname" : ctx['sender']['nickname'],
+                        "user_id" : ctx['sender']['user_id'],
+                        "time" : ctx['time']
+                    }
+                })
         fmsg = buildMsg
     return {"msg":fmsg,"have_ad":have_ad}
 
@@ -122,9 +157,12 @@ async def on_message_process(*params):
     if not Inited:
         init()
     bot, ctx = (_bot, params[0]) if len(params) == 1 else params
+    #sv.logger.info(ctx)
     msg = str(ctx['message']).strip()
+    sv.logger.info(msg)
     if 'CQ:forward' in msg:
         fmsg = await exact_forward_message(msg)
+        sv.logger.info(fmsg)
         fmsg = fmsg['messages']
         fmsg = await get_ad_removed_message(ctx,fmsg)
         if not fmsg["have_ad"]:
