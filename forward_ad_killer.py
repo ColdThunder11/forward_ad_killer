@@ -1,4 +1,5 @@
 from hoshino import Service
+from hoshino.priv import *
 from nonebot import *
 import json
 from os import path
@@ -110,8 +111,11 @@ async def get_ad_removed_message(ctx,fmsg):
 
 @sv.on_fullmatch('重载转发广告杀手配置')
 async def reload_config(bot, ev):
-    init()
-    await bot.send(ev, '重新载入配置文件成功')
+    if check_priv(ev, SUPERUSER):
+        init()
+        await bot.send(ev, '重新载入配置文件成功')
+    else:
+        await bot.send(ev, '仅SUPERUSER能够使用该指令哦')
 
 @sv.on_message()
 async def on_message_process(*params):
