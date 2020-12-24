@@ -80,10 +80,10 @@ async def get_ad_removed_message(ctx,fmsg):
             ArrayReportMode = False
         if ArrayReportMode:
             if innerMsg[0]['type'] == 'text':
-                if innerMsg[0]['data']['text'] == '[合并转发]请使用手机QQ最新版 本查看':
+                if '[合并转发]' in innerMsg[0]['data']['text']:
                     return fmsg
         else:
-            if innerMsg=="&#91;合并转发&#93;请使用手机QQ最新版本查看":
+            if "&#91;合并转发&#93" in innerMsg:
                 #  目前版本的go-cqhttp拿不到合并转发的套娃消息，因此暂时只支持一层
                 #    innerMsg = await get_inner_forward_message_id(ctx,innerMsg)
                 return fmsg
