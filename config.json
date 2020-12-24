@@ -1,6 +1,6 @@
 {
-    "ban_word" : ["更多","各种","捡漏","加群","扫码","瓜","好玩","好看","热门","上车","开车"],
-    "strict_ban_word" : ["http","www",".com",".co",".cn","加","扫","车"],
+    "ban_word" : ["更多","更 多","各种", "各 种","捡漏","加群","扫码","瓜","好玩","好看","热门","上车","开车","内部","神券"],
+    "strict_ban_word" : ["http","www",".com",".co",".cn","加","扫","车","更","多","热","玩","看","捡","内","卷"],
     "enable_strict_mode" : false,
     "enable_punish_mode" : true,
     "enable_fake_sender" : false
