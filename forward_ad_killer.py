@@ -74,6 +74,7 @@ async def get_ad_removed_message(ctx,fmsg):
         msgStart=0
     for i in range(0,msgLen):
         innerMsg = fmsg[i]["content"]
+        sv.logger.info()
         if not ArrayReportMode and isinstance(innerMsg,list):
             ArrayReportMode = True
         if ArrayReportMode and isinstance(innerMsg,str):
@@ -83,6 +84,11 @@ async def get_ad_removed_message(ctx,fmsg):
                 if "[合并转发]" in innerMsg[0]["data"]["text"]:
                     return {"msg":fmsg,"have_ad":have_ad}
         else:
+            while "[" in innerMsg:
+                startIndex = innerMsg.index("[")
+                endIndex = innerMsg.index("]",startIndex)
+                cqStr = innerMsg[startIndex:endIndex+1]
+                innerMsg = innerMsg.replace(cqStr,"")
             if "&#91;合并转发&#93" in innerMsg:
                 #  目前版本的go-cqhttp拿不到合并转发的套娃消息，因此暂时只支持一层
                 #    innerMsg = await get_inner_forward_message_id(ctx,innerMsg)
@@ -172,5 +178,3 @@ async def on_message_process(*params):
             fmsg = fmsg["msg"]
         smsg = build_send_forward_message(fmsg)
         await bot.send_group_forward_msg(group_id=ctx["group_id"], messages=smsg)
-
-
